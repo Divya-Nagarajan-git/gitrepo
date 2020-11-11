@@ -1,0 +1,70 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Parameters:
+  UserName:
+    Type: String
+    Description: Name of the user 
+  Password:
+    Type: String
+    Description:  Password path for the user in SSM parameter store
+    NoEcho: true
+    Default: "/iam/usr/pwd" 
+  PasswordResetRequired:
+    Type: String
+    Description:  If to Reset the password on login
+    Default: ""     
+  GroupName:
+    Type: String
+    Description: Group to which user has to be added. Give comma separated values
+    Default: ""
+  ManagedPolicyArns:
+    Type: String
+    Description: Policy to which user has to be added. Give comma separated values
+    Default: ""
+  Path:
+    Type: String
+    Description: The path for the user name 
+    Default: ""
+  PermissionsBoundary:
+    Type: String
+    Description: The ARN of the policy used to set the permissions boundary for the user
+    Default: ""    
+  GroupNameToCreate:
+    Type: String
+    Description: Name of the Group to be created newly
+    Default: ""  
+Conditions: 
+  HasPasswordResetRequired: !Not [!Equals ["", !Ref PasswordResetRequired] ]
+  HasGroupName: !Not [!Equals ["", !Ref GroupName] ]  
+  HasManagedPolicyArns: !Not [!Equals ["", !Ref ManagedPolicyArns] ] 
+  HasPath:  !Not [!Equals ['', !Ref Path] ]
+  HasPermissionsBoundary: !Not [!Equals ["", !Ref PermissionsBoundary] ] 
+  HasGroupNameToCreate: !Not [!Equals ["", !Ref GroupNameToCreate] ] 
+Resources:
+  newUser:
+    Type: AWS::IAM::User
+    Properties:
+      Path: !If [ HasPath,!Ref Path, !Ref "AWS::NoValue"] 
+      LoginProfile:
+        Password: !Ref Password
+        PasswordResetRequired:  !If [ HasPasswordResetRequired,!Ref PasswordResetRequired, !Ref "AWS::NoValue"] 
+      UserName: !Ref UserName
+      Groups:  !If [ HasGroupName,!Split [",", !Ref GroupName], !Ref "AWS::NoValue"]
+      ManagedPolicyArns: !If [ HasManagedPolicyArns,!Split [",", !Ref ManagedPolicyArns], !Ref "AWS::NoValue"]       
+      PermissionsBoundary: !If [ HasPermissionsBoundary,!Ref PermissionsBoundary, !Ref "AWS::NoValue"]
+  newGroup:
+    Condition:  HasGroupNameToCreate 
+    Type: AWS::IAM::Group
+    Properties: 
+      GroupName: !Ref GroupNameToCreate  
+  addUserToGroup:
+    Condition:  HasGroupNameToCreate 
+    Type: AWS::IAM::UserToGroupAddition
+    Properties: 
+      GroupName: !Ref GroupNameToCreate     
+      Users:  
+        -  !Ref newUser  
+Outputs:
+  UserArn:
+    Description: User Arn   
+    Value: !GetAtt newUser.Arn       

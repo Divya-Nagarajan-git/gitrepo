@@ -1,0 +1,102 @@
+CE_AWS_Payload_Functions.constructIAMUserPayload = function(current, IAMUserInfo, reference) {
+
+s    /* 
+            Author: Ariram N
+            Created On: 05/22/2020
+            Updated On: 05/22/2020
+            Product: Cloud Exponence
+            Version: 1
+            Description: This function will construct IAM user payload
+    */
+
+    /* Location code, Catalog Task Number, Subscription , Script and Template Path*/
+    var genericData = CE_AWS_Payload_Functions.fetchGenericInformation(current, 'AWS_IAMUSER');
+    if (genericData.Status == 'FAILED') {
+        return genericData;
+    }
+
+    /* Payload for AWS IAM User Creation  */
+
+
+    var tags = CE_AWS_Payload_Functions.constructMandatoryTags(current);
+    for (var j = 1; j <= 5; j++) {
+        if (current.variables['tag_key' + j].toString() != "") {
+
+            tags.push({
+                "Key": current.variables['tag_key' + j].toString(),
+                "Value": current.variables['tag_value' + j].toString()
+            });
+        }
+    }
+
+    var managedPolicyArn = (current.variables.managed_policy_arn.getDisplayValue().toString()).replace(/\s+/g, '');
+    var permissions_boundary_needed = current.variables.is_permission_boundary_to_be_set.toString();
+    var permissions_boundary = "";
+    if (permissions_boundary_needed == "Yes") {
+        permissions_boundary = current.variables.permissions_boundary.toString();
+    }
+
+    var payload = {
+        "ScriptFiles": [{
+                "Name": "IAM_User.py",
+                "Type": "PY",
+                "Uri": genericData['ScriptURL']
+            },
+            {
+                "Name": "IAM_User.yml",
+                "Type": "CFT",
+                "Uri": genericData['TemplateURL']
+            }
+        ],
+        "ScriptPayload": {
+            /*parameter name from template */
+            /*variable name from servicenow*/
+            /* "Region":                        genericData['Location'], */
+            "Region": genericData['Location'],
+            /*"UserName": IAMUserInfo.userName.toString(),*/
+            "UserName": current.variables.username.toString(),
+            "Password": current.variables.password.toString(),
+            "PasswordResetRequired": current.variables.password_reset_required.toString(),
+            "GroupName": current.variables.group_name.toString(),
+            "ManagedPolicyArns": managedPolicyArn,
+            "Path": current.variables.path.toString(),
+            "PermissionsBoundary": current.variables.permissions_boundary.toString(),
+            "GroupNameToCreate": current.variables.group_name_to_create.toString(),
+            "StackName": current.number.toString() + "-IAMUserCreation",
+            "Tags": tags
+        }
+
+    };
+    /* CMDB Record for AWS IAM User*/
+    var record = {};
+    record[current.number.toString()] = {
+        "TableName": "u_cmdb_ci_ce_iam_user",
+        "Fields": {
+            /*"name": IAMUserInfo.vpcName, */
+            "u_username": current.variables.username.toString(),
+            "u_password": current.variables.password.toString(),
+            "u_passwordresetrequired": current.variables.password_reset_required.toString(),
+            "u_groupname": current.variables.group_name.toString(),
+            "u_managedpolicyarns": managedPolicyArn,
+            "u_path": current.variables.path.toString(),
+            "u_permissionsboundary": current.variables.permissions_boundary.toString(),
+            "u_groupnametocreate": current.variables.group_name_to_create.toString(),
+            "u_tags": JSON.stringify(tags)
+        }
+    };
+
+    /* Comments for AWS IAM User Creation */
+    var comment = '\nUser Details:\n' +
+        '\n User Name: ' + current.variables.username.toString() +
+        '\n added to existing group: ' + current.variables.group_name.toString() +
+        '\n Created new User Group: ' + current.variables.group_name_to_create.toString();
+
+    workflow.info("comment is " + comment);
+
+    return {
+        "Status": "COMPLETED",
+        "Payload": payload,
+        "Comment": comment,
+        "CMDBRecord": record,
+    };
+};

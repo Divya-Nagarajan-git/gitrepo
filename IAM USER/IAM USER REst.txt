@@ -1,0 +1,61 @@
+CE_AWS_Rest_Invoke_Functions.invokeIAMUserprovision = function(current) {
+
+    /* 
+			Author: Ariram N
+			Created On: 05/22/2020
+			Updated On: 05/22/2020
+			Product: Cloud Exponence
+			Version: 1
+			Description: This function will invokeIAMUserProvision
+    */
+
+    /* Rest Message Body and Return Values */
+    var messageBody = {};
+    var cmdbRecord = {};
+    var ticketComments = '';
+
+    /*give the name which was added in namepattern table */
+    var userName = CE_Core_Functions.getNameFromPattern(current, "AWS_IAMUSER", 1);
+    /*workflow.info("userName detail is "+userName.Name[0]); */
+    if (userName.Status == 'FAILED') {
+        return {
+            "Status": "FAILED",
+            "Status_Reason": "Error in ServiceNow. Unable to generate name for IAM user. " + userName.Status_Reason
+        };
+    }
+
+    /* Get Payload for IAM USER Creation*/
+    var IAMUserInfo = CE_AWS_Payload_Functions.constructIAMUserPayload(
+        current, {
+            "userName": userName.Name[0]
+        }, {
+
+        }
+    );
+    gs.log(JSON.stringify(IAMUserInfo));
+    if (IAMUserInfo.Status == 'FAILED') {
+        return IAMUserInfo;
+    }
+
+    /* Update the rest message body and return values */
+    messageBody = (IAMUserInfo.Payload);
+    cmdbRecord = CE_Core_Functions.mergeObject(cmdbRecord, IAMUserInfo.CMDBRecord);
+    ticketComments += IAMUserInfo.Comment;
+
+    /*Send the Rest Message for AWS IAM User and its related resources*/
+    var restResponse = CE_AWS_Rest_Invoke_Functions.executeRestMessage(current, messageBody);
+
+    if (restResponse.Status == 'FAILED') {
+        var responseBodyJson = JSON.parse(restResponse.ResonseBody);
+        return {
+            "Status": "FAILED",
+            "Status_Reason": "AWS IAM User Creation FAILED. Error Message: " + responseBodyJson.Status_Reason
+        };
+    }
+    return {
+        "Status": "COMPLETED",
+        "Status_Reason": ticketComments,
+        "CMDBRecord": cmdbRecord,
+        "MessageBody": messageBody
+    };
+};

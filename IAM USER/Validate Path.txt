@@ -1,0 +1,19 @@
+function onChange(control, oldValue, newValue, isLoading) {
+   if (isLoading || newValue == '') {
+      return;
+   }
+
+	var patt = (/^([\/][\w\.\?\!\,\:\;\[\]\(\)\{\}'"-_]+[\/])$/);
+	var pathvalue = g_form.getValue('path');
+	console.log("path is " +pathvalue);
+	g_form.hideFieldMsg('path',true);
+	if(!patt.test(pathvalue))
+		{
+			g_form.showFieldMsg('path','Enter a valid path','error');
+		}
+	else
+		{
+			return true;
+		}
+   
+}

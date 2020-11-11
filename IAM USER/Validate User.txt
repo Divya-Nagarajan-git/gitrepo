@@ -1,0 +1,45 @@
+  function onChange(control, oldValue, newValue, isLoading) {
+   if (isLoading || newValue == '') {
+      return;
+   }
+    g_form.hideFieldMsg('username', true);
+    g_form.showFieldMsg('username', 'Validating..', 'warning');
+	  var abc = g_form.getValue('username');	  
+	  alert(abc);
+
+    var iamuser = new GlideAjax('CE_ValidateData_CE');
+    iamuser.addParam('sysparm_name','ce_validate_username');
+    //iamuser.addParam('sysparm_username',abc);
+    iamuser.getXML(callBackFunction);
+
+function callBackFunction(response) {
+	//console.log("inside call back function");
+    var answer = response.responseXML.documentElement.getAttribute('answer');
+	g_form.hideFieldMsg('username', true);
+	var StrtoArr = [];
+	StrtoArr = answer.split(','); //converting string to array 
+	
+	var flag = 0;
+	var result;
+	String.prototype.equalsIgnoreCase = function (compareString) { return this.toUpperCase() === compareString.toUpperCase(); 
+};
+	
+	for(var i = 1; i< StrtoArr.length; i++)
+	{
+	  if(abc.equalsIgnoreCase(StrtoArr[i])) {
+	     console.log(" equals");
+       flag++;
+       } else{
+		   console.log("not equals");
+	   }
+}
+	if(flag>0)
+		{
+			g_form.showFieldMsg('username', 'User name already exist, select different name!', 'error');
+        
+		}
+	else {
+        return true;
+    }
+}
+}
